@@ -1,0 +1,11 @@
+irmovq a, %r8
+mrmovq (%r8), %r8
+irmovq b, %r9
+mrmovq (%r9), %r9
+halt
+
+
+
+.pos 0x100
+a: .quad 1
+b: .quad 2

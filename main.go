@@ -1,16 +1,26 @@
 package main
 
-import "y86/model"
+import (
+	"fmt"
+	"log"
+	"os"
+	"y86/assembler"
+)
 
 func main() {
-	cpu := model.CPU{}
+	file, err := os.ReadFile("./file.txt")
 
-	// instructions
-	cpu.CopyBuf(0, model.EncodeInst(1, 0, 0, 0, 0))
-	cpu.CopyBuf(1, model.EncodeInst(0, 0, 0, 0, 0))
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	var status byte = 0
-	for status == 0 {
-		status = cpu.Tick()
+	src := string(file)
+	scanner := assembler.NewScanner(src)
+
+	tokens, err := scanner.Scan()
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Printf("%v", tokens)
 	}
 }

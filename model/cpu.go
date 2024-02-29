@@ -141,15 +141,17 @@ func (cpu *CPU) ccCheck() bool {
 	fcode := cpu.state.instreg.fcode
 
 	switch fcode {
-	case lte:
+	case 0:
+		return true
+	case le:
 		return cpu.state.cc.z || cpu.state.cc.s
-	case lt:
+	case l:
 		return cpu.state.cc.s
 	case e:
 		return cpu.state.cc.z
 	case ne:
 		return !cpu.state.cc.z
-	case gt:
+	case g:
 		return !cpu.state.cc.s
 	case ge:
 		return !(cpu.state.cc.z || cpu.state.cc.s)

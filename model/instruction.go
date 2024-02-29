@@ -28,12 +28,12 @@ const (
 
 // Conditional check flags
 const (
-	lte = sub
-	lt  = and
+	le = sub
+	l  = and
 	e   = xor
 	ne  = mul
 	ge  = div
-	gt  = mod
+	g  = mod
 )
 
 // Convert an 8 byte integer to a byte slice in little endiann format.
