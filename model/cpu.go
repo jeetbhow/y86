@@ -10,7 +10,7 @@ const (
 	hlt             // Halt instruction encountered
 	adr             // Bad address
 	ins             // Bad instruction
-	dz              // Divide by zero
+	dz              // Division by zero
 )
 
 // Maps fcodes to ALU functions.
@@ -66,7 +66,7 @@ type CPU struct {
 	state cpuState      // state
 }
 
-// Advance the clock by one cycle and return the status
+// Advance the clock by one cycle and return the status.
 func (cpu *CPU) Tick() byte {
 	cpu.fetch()
 	cpu.decode()

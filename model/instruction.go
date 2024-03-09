@@ -30,9 +30,9 @@ const (
 const (
 	le = sub
 	l  = and
-	e   = xor
-	ne  = mul
-	ge  = div
+	e  = xor
+	ne = mul
+	ge = div
 	g  = mod
 )
 

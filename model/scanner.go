@@ -1,66 +1,14 @@
-package assembler
+package model
 
 import (
 	"errors"
 	"unicode"
 )
 
-// not a token
-type NaT struct{}
-
-func (nat *NaT) Error() string {
-	return "invalid token"
-}
-
-// Maps strings to TokenTypes.
-var tokenMap = map[string]TokenType{
-	"halt":   halt,
-	"nop":    nop,
-	"rrmovq": rrmovq,
-	"irmovq": irmovq,
-	"rmmovq": rrmovq,
-	"mrmovq": mrmovq,
-	"addq":   addq,
-	"subq":   subq,
-	"andq":   andq,
-	"xorq":   xorq,
-	"mulq":   mulq,
-	"divq":   divq,
-	"modq":   modq,
-	"jmp":    jmp,
-	"jle":    jle,
-	"jl":     jl,
-	"je":     je,
-	"jne":    jne,
-	"jge":    jge,
-	"jg":     jg,
-	"call":   call,
-	"ret":    ret,
-	"pushq":  pushq,
-	"popq":   popq,
-}
-
-var regSet = map[string]bool{
-	"%rax": true,
-	"%rcx": true,
-	"%rdx": true,
-	"%rbx": true,
-	"%rsp": true,
-	"%rbp": true,
-	"%rsi": true,
-	"%rdi": true,
-	"%r10": true,
-	"%r11": true,
-	"%r12": true,
-	"%r13": true,
-	"%r14": true,
-	"%r15": true,
-}
-
 // Scans a source string and generates a list of tokens.
 type Scanner struct {
 	src    string  // the source code
-	curr   int     // points at the current unprocessed character
+	cur    int     // points at the current unprocessed character
 	start  int     // the start of the sliding window
 	line   uint    // the current line
 	col    uint    // the current col
@@ -93,20 +41,15 @@ func (s *Scanner) Scan() ([]Token, error) {
 
 // Return the current character and advance the scanner.
 func (s *Scanner) advance() rune {
-	r := s.src[s.curr]
-	s.curr++
+	r := s.src[s.cur]
+	s.cur++
 	s.col++
 	return rune(r)
 }
 
-// Return the current character that the scanner is pointing at without advancing it.
-func (s *Scanner) peek() rune {
-	return rune(s.src[s.curr])
-}
-
 // Returns true if the scanner is at the end of the file and false if it is not
 func (s *Scanner) isAtEnd() bool {
-	return s.curr >= len(s.src)
+	return s.cur >= len(s.src)
 }
 
 // Add a token literal to the token list.
@@ -116,7 +59,7 @@ func (s *Scanner) addTokenLiteral(tokenType TokenType, literal string) {
 
 // Add a token to the token list.
 func (s *Scanner) addToken(tokenType TokenType) {
-	lex := s.src[s.start:s.curr]
+	lex := s.src[s.start:s.cur]
 	s.tokens = append(s.tokens, NewToken(tokenType, lex, s.line, s.col))
 }
 
@@ -127,33 +70,39 @@ func (s *Scanner) matchNumber(r rune) bool {
 		r = s.advance()
 	}
 
-	if !s.isAtEnd() {
-		s.curr--
-	}
-
-	if r != ',' && !unicode.IsSpace(r) && !unicode.IsNumber(r) {
+	if r != ',' && r != '(' && !unicode.IsSpace(r) && !unicode.IsNumber(r) {
 		return false
 	}
-	s.addToken(number)
+
+	if !s.isAtEnd() || r == '(' {
+		s.cur--
+	}
+
+	s.addToken(num)
 	return true
+}
+
+// Return true if the rune is a termination sequence and false if it isn't.
+func isAtTerminationSeq(r rune) bool {
+	return r == ':' || r == ',' || unicode.IsSpace(r)
 }
 
 // Match a sequence of alphanumeric characters in the source string.
 func (s *Scanner) matchIdentifier(r rune) {
-	for !s.isAtEnd() && r != ':' && !unicode.IsSpace(r) {
+	for !s.isAtEnd() && !isAtTerminationSeq(r) {
 		r = s.advance()
 	}
 
-	if !s.isAtEnd() || r != ':' {
-		s.curr--
+	if !s.isAtEnd() || r == ':' || r == ',' {
+		s.cur--
 	}
 
-	lex := s.src[s.start:s.curr]
-	keyword, ok := tokenMap[lex]
+	lex := s.src[s.start:s.cur]
+	keyword, ok := lexemeTable[lex]
 	if ok {
 		s.addToken(keyword)
 	} else {
-		s.addToken(identifier)
+		s.addToken(label)
 	}
 }
 
@@ -191,7 +140,7 @@ func (s *Scanner) matchReg() bool {
 
 // Return the next token from the source file.
 func (s *Scanner) next() error {
-	s.start = s.curr
+	s.start = s.cur
 	r := s.advance()
 
 	switch {
@@ -201,18 +150,22 @@ func (s *Scanner) next() error {
 	case r == '(':
 		s.addTokenLiteral(lparen, "(")
 	case r == ')':
-		s.addTokenLiteral(lparen, ")")
+		s.addTokenLiteral(rparen, ")")
 	case r == ':':
-		s.addTokenLiteral(lparen, ":")
+		s.addTokenLiteral(colon, ":")
 	case r == ',':
-		s.addTokenLiteral(lparen, ",")
+		s.addTokenLiteral(comma, ",")
 	case r == '.':
-		s.addTokenLiteral(dot, ".")
+		s.matchIdentifier(r)
 	case r == '0':
-		if r = s.peek(); r == 'x' {
-			s.advance()
-			s.matchNumber(r)
-		} else {
+		r = s.advance()
+		switch r {
+		case 'x':
+			s.matchNumber(s.advance())
+		case '(':
+			s.addTokenLiteral(num, "0")
+			s.cur--
+		default:
 			s.matchIdentifier(r)
 		}
 	case r == '%':

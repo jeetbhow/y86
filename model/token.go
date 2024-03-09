@@ -1,43 +1,19 @@
-package assembler
+package model
 
 type TokenType uint8
 
 const (
-	halt TokenType = iota
-	nop
-	rrmovq
-	irmovq
-	rmmovq
-	mrmovq
-	addq
-	subq
-	andq
-	xorq
-	mulq
-	divq
-	modq
-	jmp
-	jle
-	jl
-	je
-	jne
-	jge
-	jg
-	call
-	ret
-	pushq
-	popq
+	instruction TokenType = iota
 	reg
-	colon
-	comma
 	lparen
 	rparen
 	pos
 	quad
-	number
-	identifier
-	invalid
-	dot
+	num
+	label
+	dir
+	colon
+	comma
 	eof
 )
 
@@ -50,9 +26,9 @@ type Token struct {
 }
 
 // Create a new token
-func NewToken(tokenType TokenType, lex string, line uint, col uint) Token {
+func NewToken(tokType TokenType, lex string, line uint, col uint) Token {
 	return Token{
-		tokenType,
+		tokType,
 		lex,
 		line,
 		col,
