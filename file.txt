@@ -6,5 +6,5 @@ mrmovq 1(%r9), %r9
 halt
 
 .pos 0x1000
-a: .quad 1
-b: .quad 2
+a: .quad 18446744073709551615
+b: .quad 18446744073709551615

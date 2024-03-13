@@ -36,7 +36,7 @@ var lexemeTable = map[string]TokenType{
 }
 
 // Table of register strings and their numberical values.
-var regTable = map[string]byte{
+var registerTable = map[string]byte{
 	"%rax": 0,
 	"%rcx": 1,
 	"%rdx": 2,

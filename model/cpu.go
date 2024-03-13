@@ -25,9 +25,7 @@ var alu = map[byte]func(int64, int64) int64{
 }
 
 const maxMem = 0xffff // Total RAM
-
-const numReg = 16 // Number of registers the CPU supports.
-
+const numReg = 16     // Number of registers the CPU supports.
 const stackPtrReg = 4 // Stack pointer register
 
 // Output of fetch stage. Important data that's used throughout the pipeline.
@@ -66,6 +64,14 @@ type CPU struct {
 	state cpuState      // state
 }
 
+func (cpu *CPU) GetMem() *[maxMem]byte {
+	return &cpu.mem
+}
+
+func (cpu *CPU) GetState() *cpuState {
+	return &cpu.state
+}
+
 // Advance the clock by one cycle and return the status.
 func (cpu *CPU) Tick() byte {
 	cpu.fetch()
@@ -94,7 +100,7 @@ func (cpu *CPU) CopyBuf(addr int, buf []byte) error {
 
 // Write a little endiann 8-byte integer to memory at an address. If the address is
 // invalid then set the status to ADR.
-func (cpu *CPU) writeMem(addr int, val int64) {
+func (cpu *CPU) writeLongToMem(addr int, val int64) {
 	if addr < 0 || addr+8 > maxMem {
 		cpu.state.status = adr
 		return
@@ -106,6 +112,30 @@ func (cpu *CPU) writeMem(addr int, val int64) {
 		cpu.mem[addr+i] = byte
 		val = val >> 8
 	}
+}
+
+func (cpu *CPU) writeBytesToMem(addr int, bytes []byte) error {
+	if addr+len(bytes) >= maxMem || addr < 0 {
+		return fmt.Errorf("error: cannot write %d bytes to address %#x", len(bytes), addr)
+	}
+
+	for i, value := range bytes {
+		cpu.mem[addr+i] = value
+	}
+	return nil
+}
+
+// Read a sequence of bytes from memory and store it into a buffer.
+func (cpu *CPU) readBytesFromMem(addr int, size int) ([]byte, error) {
+	if addr+size >= maxMem || addr < 0 {
+		return nil, fmt.Errorf("error: address %#x is invalid", addr)
+	}
+
+	bytes := make([]byte, size)
+	for i := 0; i < size; i++ {
+		bytes[i] = cpu.mem[addr+i]
+	}
+	return bytes, nil
 }
 
 // Return the little endiann 8-byte int at an address. If the address is invalid then set the
@@ -198,9 +228,39 @@ func (cpu *CPU) setNextPC() {
 
 // Fetch the next instruction and set the instruction register and valP.
 func (cpu *CPU) fetch() {
-	instInt := cpu.readMem(cpu.state.pc)
-	var bytes []byte = intToBytes(instInt)
-	cpu.state.instreg = createInstReg(bytes)
+	var size int
+	switch cpu.mem[cpu.state.pc] {
+	case halt:
+		size = 1
+	case nop:
+		size = 1
+	case rrmovq:
+		size = 2
+	case irmovq:
+		size = 10
+	case rmmovq:
+		size = 10
+	case mrmovq:
+		size = 10
+	case opq:
+		size = 2
+	case jxx:
+		size = 9
+	case call:
+		size = 9
+	case ret:
+		size = 1
+	case pushq:
+		size = 2
+	case popq:
+		size = 2
+	}
+
+	var instruction, err = cpu.readBytesFromMem(cpu.state.pc, size)
+	if err != nil {
+		cpu.state.status = adr
+	}
+	cpu.state.instreg = createInstReg(instruction)
 	cpu.setNextPC()
 }
 
@@ -317,15 +377,15 @@ func (cpu *CPU) memory() {
 
 	switch opcode {
 	case rmmovq:
-		cpu.writeMem(valE, cpu.state.valA)
+		cpu.writeLongToMem(valE, cpu.state.valA)
 	case mrmovq:
 		cpu.state.valM = cpu.readMem(valE)
 	case call:
-		cpu.writeMem(valE, valP)
+		cpu.writeLongToMem(valE, valP)
 	case ret:
 		cpu.state.valM = cpu.readMem(valB)
 	case pushq:
-		cpu.writeMem(valE, cpu.state.valA)
+		cpu.writeLongToMem(valE, cpu.state.valA)
 	case popq:
 		cpu.state.valM = cpu.readMem(valB)
 	default:

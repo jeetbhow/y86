@@ -28,10 +28,11 @@ func main() {
 	err = parser.Parse()
 
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
 	}
 
-	parser.PrintSymbolTable()
-	parser.PrintDataTable()
+	cpu := new(model.CPU)
 	parser.PrintInsBuf()
+	parser.LoadCPU(cpu)
+	fmt.Println(*cpu.GetMem())
 }

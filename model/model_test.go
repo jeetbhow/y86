@@ -152,7 +152,7 @@ func TestWriteMem(t *testing.T) {
 	cpu := CPU{}
 	addr := 0
 	var val int64 = 0x00010203040506070
-	cpu.writeMem(addr, val)
+	cpu.writeLongToMem(addr, val)
 
 	var readVal int64 = 0
 	for i := 7; i >= 0; i-- {
@@ -177,7 +177,7 @@ func TestWriteMem(t *testing.T) {
 func TestWriteMemBadAddr(t *testing.T) {
 	cpu := CPU{}
 	addr := maxMem + 1
-	cpu.writeMem(addr, 0)
+	cpu.writeLongToMem(addr, 0)
 
 	if cpu.state.status != adr {
 		t.Fail()
@@ -297,7 +297,7 @@ func TestTick(t *testing.T) {
 			addr := 0
 			cpu.CopyBuf(addr, tc.inst)
 			cpu.writeReg(stackPtrReg, 0x30)
-			cpu.writeMem(0x30, 0x2000)
+			cpu.writeLongToMem(0x30, 0x2000)
 			cpu.Tick()
 			if cpu.state != tc.expectedState {
 				t.Errorf("expected %+v but got %+v\n", tc.expectedState, cpu.state)
