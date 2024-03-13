@@ -7,6 +7,7 @@ import (
 
 // Contains functions for parsing an instruction and converting it into a byte representation.
 var parseDispatchTable = map[byte]func(token Token, parser *Parser) error{
+	halt:   parseHalt,
 	irmovq: parseIrmovq,
 	mrmovq: parseMrmovq,
 }
@@ -97,7 +98,7 @@ func (p *Parser) firstPass() error {
 func (p *Parser) secondPass() error {
 	for !p.isAtEnd() {
 		currToken := p.advance()
-		
+
 		switch currToken.tokenType {
 		case dir:
 			p.parseDirective(currToken)
@@ -168,6 +169,12 @@ func (p *Parser) parseInstruction(token Token) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+var parseHalt = func(token Token, p *Parser) error {
+	bytes := []byte{0x0, 0x0}
+	p.insBuf = append(p.insBuf, bytes)
 	return nil
 }
 
