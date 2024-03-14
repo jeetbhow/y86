@@ -32,7 +32,6 @@ func main() {
 	}
 
 	cpu := new(model.CPU)
-	parser.PrintInsBuf()
 	parser.LoadCPU(cpu)
-	fmt.Println(*cpu.GetMem())
+	cpu.Execute()
 }

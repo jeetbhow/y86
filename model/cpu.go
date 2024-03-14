@@ -72,6 +72,24 @@ func (cpu *CPU) GetState() *cpuState {
 	return &cpu.state
 }
 
+func (cpu *CPU) Execute() error {
+	// This means that the starting address is invalid
+	var status byte = cpu.state.status
+	if status == adr {
+		return fmt.Errorf("error: entry point %#x is not a 16-bit address", cpu.state.pc)
+	}
+
+	for status == aok {
+		status = cpu.Tick()
+	}
+
+	if status != halt {
+		return fmt.Errorf("error: status code %d", status)
+	} else {
+		return nil
+	}
+}
+
 // Advance the clock by one cycle and return the status.
 func (cpu *CPU) Tick() byte {
 	cpu.fetch()

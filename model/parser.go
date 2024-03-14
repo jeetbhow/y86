@@ -7,7 +7,9 @@ import (
 
 // Contains functions for parsing an instruction and converting it into a byte representation.
 var parseDispatchTable = map[byte]func(token Token, opcode byte, fcode byte, size byte, parser *Parser) error{
-	halt:   parseHalt,
+	halt:   parse1Byte,
+	nop:    parse1Byte,
+	opq:    parse2Byte,
 	irmovq: parseIrmovq,
 	mrmovq: parseMrmovq,
 }
@@ -207,30 +209,50 @@ func (p *Parser) parseInstruction(token Token) error {
 	return nil
 }
 
-var parseHalt = func(token Token, opcode byte, fcode byte, size byte, p *Parser) error {
-	bytes := []byte{0x0, 0x0}
-	p.instructionBuffer = append(p.instructionBuffer, bytes)
+// Parses a 1 byte instruction such as halt, nop, ret
+var parse1Byte = func(token Token, opcode byte, fcode byte, size byte, p *Parser) error {
+	instruction := make([]byte, size)
+	instruction[0] = opcode<<4 | fcode
+	p.instructionBuffer = append(p.instructionBuffer, instruction)
+	return nil
+}
+
+// Parses a 2 bytes instruction such as opq, pushq, popq. They have the form Command-Reg-Reg
+var parse2Byte = func(token Token, opcode byte, fcode byte, size byte, p *Parser) error {
+	instruction := make([]byte, size)
+	args := []Token{p.advance(), p.advance(), p.advance()}
+
+	if IsEof(args) {
+		return fmt.Errorf("unexpected eof at [%d:%d]", token.line, token.col)
+	} else if !IsValidArgs(args, reg, comma, reg) {
+		return fmt.Errorf("invalid arguments at [%d:%d]", token.line, token.col)
+	}
+	rA, rAExists := registerTable[args[0].lex]
+	rB, rBExists := registerTable[args[2].lex]
+
+	if !rAExists {
+		return fmt.Errorf("invalid register at [%d:%d]", args[0].line, args[0].col)
+	} else if !rBExists {
+		return fmt.Errorf("invalid register at [%d:%d]", args[2].line, args[2].col)
+	}
+
+	instruction[1] = rA<<4 | rB
+	p.instructionBuffer = append(p.instructionBuffer, instruction)
 	return nil
 }
 
 // Parse the irmovq instruction and increment the location counter of the parser.
 var parseIrmovq = func(token Token, opcode byte, fcode byte, size byte, p *Parser) error {
 	var args = []Token{p.advance(), p.advance(), p.advance()}
-	var rA byte
-	var rB byte
 	bytes := make([]byte, size)
-
-	bytes[0] = byte(opcode<<4 | fcode)
 
 	if IsEof(args) {
 		return fmt.Errorf("unexpected eof at [%d:%d]", token.line, token.col)
-	}
-
-	if !IsValidArgs(args, label, comma, reg) && !IsValidArgs(args, num, comma, reg) {
+	} else if !IsValidArgs(args, label, comma, reg) && !IsValidArgs(args, num, comma, reg) {
 		return fmt.Errorf("invalid arguments at [%d:%d]", token.line, token.col)
 	}
-
-	rA = 0xf
+	bytes[0] = byte(opcode<<4 | fcode)
+	var rA byte = 0xf
 	rB, ok := registerTable[args[2].lex]
 	if !ok {
 		return fmt.Errorf("invalid register at [%d:%d]", args[2].line, args[2].col)
