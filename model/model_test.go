@@ -6,13 +6,13 @@ import (
 	"testing"
 )
 
-var haltState cpuState = cpuState{
+var haltState CpuState = CpuState{
 	valP:   1,
 	pc:     1,
 	status: hlt,
 }
 
-var nopState cpuState = cpuState{
+var nopState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 1,
 	},
@@ -20,7 +20,7 @@ var nopState cpuState = cpuState{
 	pc:   1,
 }
 
-var rrmovqState cpuState = cpuState{
+var rrmovqState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 2,
 		rA:     1,
@@ -33,7 +33,7 @@ var rrmovqState cpuState = cpuState{
 	pc:   2,
 }
 
-var irmovqState cpuState = cpuState{
+var irmovqState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 3,
 		rA:     15,
@@ -47,7 +47,7 @@ var irmovqState cpuState = cpuState{
 	pc:   10,
 }
 
-var rmmovqState cpuState = cpuState{
+var rmmovqState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 4,
 		rA:     1,
@@ -61,7 +61,7 @@ var rmmovqState cpuState = cpuState{
 	pc:   10,
 }
 
-var mrmovqState cpuState = cpuState{
+var mrmovqState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 5,
 		rA:     1,
@@ -75,7 +75,7 @@ var mrmovqState cpuState = cpuState{
 	pc:   10,
 }
 
-var aluAddState cpuState = cpuState{
+var aluAddState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 6,
 		fcode:  0,
@@ -89,7 +89,7 @@ var aluAddState cpuState = cpuState{
 	pc:   2,
 }
 
-var jumpState cpuState = cpuState{
+var jumpState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 7,
 		fcode:  ne,
@@ -99,7 +99,7 @@ var jumpState cpuState = cpuState{
 	pc:   0x2000,
 }
 
-var callState cpuState = cpuState{
+var callState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 8,
 		valC:   0x2000,
@@ -110,7 +110,7 @@ var callState cpuState = cpuState{
 	pc:   0x2000,
 }
 
-var retState cpuState = cpuState{
+var retState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 9,
 	},
@@ -121,7 +121,7 @@ var retState cpuState = cpuState{
 	pc:   0x2000,
 }
 
-var pushState cpuState = cpuState{
+var pushState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 10,
 		rA:     0x1,
@@ -134,7 +134,7 @@ var pushState cpuState = cpuState{
 	pc:   0x2,
 }
 
-var popState cpuState = cpuState{
+var popState CpuState = CpuState{
 	instreg: instReg{
 		opcode: 11,
 		rA:     0x1,
@@ -270,7 +270,7 @@ func TestTick(t *testing.T) {
 	testcases := []struct {
 		name          string
 		inst          []byte
-		expectedState cpuState
+		expectedState CpuState
 	}{
 		{"halt", EncodeInst(0, 0, 0, 0, 0), haltState},
 		{"nop", EncodeInst(1, 0, 0, 0, 0), nopState},

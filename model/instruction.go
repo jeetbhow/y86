@@ -64,6 +64,15 @@ func createInstReg(bytes []byte) instReg {
 	fcode := bytes[0] & 0x0f
 
 	switch opcode {
+	case halt:
+		fallthrough
+	case nop:
+		fallthrough
+	case ret:
+		return instReg{
+			opcode: opcode,
+			fcode:  fcode,
+		}
 	case jxx:
 		fallthrough
 	case call:

@@ -16,22 +16,26 @@ var parseDispatchTable = map[byte]func(token Token, opcode byte, fcode byte, siz
 
 // Object that converts a list of tokens to a set of machine instructions which it can save on the disk.
 type Parser struct {
-	tokens            []Token        // list of tokens
-	curr              int            // the current token index
-	symbolTable       map[string]int // contains all of the labels and their addresses
-	dataTable         map[int]int64  // contains all of the data to be stored in memory
-	instructionBuffer [][]byte       // contains machine code
-	start             int            // the starting address of the program
-	lc                int            // location counter
+	tokens       []Token        // list of tokens
+	curr         int            // the current token index
+	symbolTable  map[string]int // contains all of the labels and their addresses
+	dataTable    map[int]int64  // contains all of the data to be stored in memory
+	instructions [][]byte       // translated machine code
+	start        int            // the starting address of the program
+	lc           int            // location counter
 }
 
 func NewParser(tokens []Token) *Parser {
 	return &Parser{
-		tokens:            tokens,
-		symbolTable:       make(map[string]int),
-		dataTable:         make(map[int]int64),
-		instructionBuffer: make([][]byte, 0),
+		tokens:       tokens,
+		symbolTable:  make(map[string]int),
+		dataTable:    make(map[int]int64),
+		instructions: make([][]byte, 0),
 	}
+}
+
+func (p *Parser) SetTokens(tokens []Token) {
+	p.tokens = tokens
 }
 
 func (p *Parser) GetDataTable() map[int]int64 {
@@ -39,7 +43,7 @@ func (p *Parser) GetDataTable() map[int]int64 {
 }
 
 func (p *Parser) GetInstructionBuffer() [][]byte {
-	return p.instructionBuffer
+	return p.instructions
 }
 
 // Print the symbol table to the console.
@@ -53,8 +57,8 @@ func (p *Parser) PrintDataTable() {
 }
 
 // Print the machine code to the console.
-func (p *Parser) PrintInsBuf() {
-	fmt.Printf("%x\n", p.instructionBuffer)
+func (p *Parser) PrintInstructions() {
+	fmt.Printf("%x\n", p.instructions)
 }
 
 // Return the starting address of the program.
@@ -63,7 +67,7 @@ func (p *Parser) GetStart() int {
 }
 
 // Create the machine code translation of the assembly code.
-func (p *Parser) Parse() error {
+func (p *Parser) parse() error {
 	err1 := p.firstPass()
 	err2 := p.secondPass()
 
@@ -119,32 +123,16 @@ func (p *Parser) secondPass() error {
 	return nil
 }
 
-func (l *Parser) LoadCPU(cpu *CPU) {
-	l.setEntryPoint(cpu)
-	l.loadData(cpu)
-	l.loadInstructions(cpu)
-}
-
+// Set the program counter to the first instruction in memory.
 func (l *Parser) setEntryPoint(cpu *CPU) {
 	cpu.state.pc = l.start
 }
 
+// Load the data into memory.
 func (l *Parser) loadData(cpu *CPU) {
 	for address, data := range l.dataTable {
 		cpu.writeLongToMem(address, data)
 	}
-}
-
-func (l *Parser) loadInstructions(cpu *CPU) error {
-	address := cpu.state.pc
-	for _, bytes := range l.instructionBuffer {
-		err := cpu.writeBytesToMem(address, bytes)
-		if err != nil {
-			return err
-		}
-		address += len(bytes)
-	}
-	return nil
 }
 
 // Returns true if there are no more tokens left to parse and false if there are.
@@ -213,7 +201,7 @@ func (p *Parser) parseInstruction(token Token) error {
 var parse1Byte = func(token Token, opcode byte, fcode byte, size byte, p *Parser) error {
 	instruction := make([]byte, size)
 	instruction[0] = opcode<<4 | fcode
-	p.instructionBuffer = append(p.instructionBuffer, instruction)
+	p.instructions = append(p.instructions, instruction)
 	return nil
 }
 
@@ -235,9 +223,9 @@ var parse2Byte = func(token Token, opcode byte, fcode byte, size byte, p *Parser
 	} else if !rBExists {
 		return fmt.Errorf("invalid register at [%d:%d]", args[2].line, args[2].col)
 	}
-
+	instruction[0] = opcode<<4 | fcode
 	instruction[1] = rA<<4 | rB
-	p.instructionBuffer = append(p.instructionBuffer, instruction)
+	p.instructions = append(p.instructions, instruction)
 	return nil
 }
 
@@ -268,7 +256,7 @@ var parseIrmovq = func(token Token, opcode byte, fcode byte, size byte, p *Parse
 		val := p.symbolTable[args[0].lex]
 		copy(bytes[2:], intToBytes(int64(val)))
 	}
-	p.instructionBuffer = append(p.instructionBuffer, bytes)
+	p.instructions = append(p.instructions, bytes)
 	p.lc += int(size)
 	return nil
 }
@@ -311,7 +299,7 @@ var parseMrmovq = func(token Token, opcode byte, fcode byte, size byte, p *Parse
 	rA = registerTable[args[4].lex]
 	bytes[1] = byte(rA<<4 | rB)
 	copy(bytes[2:], intToBytes(valC))
-	p.instructionBuffer = append(p.instructionBuffer, bytes)
+	p.instructions = append(p.instructions, bytes)
 	p.lc += int(size)
 	return nil
 }

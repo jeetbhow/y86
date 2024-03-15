@@ -27,16 +27,20 @@ func NewScanner(src string) *Scanner {
 	}
 }
 
+func (s *Scanner) SetSource(src string) {
+	s.src = src
+}
+
 // Scans the source file and returns a list of tokens.
-func (s *Scanner) Scan() ([]Token, error) {
+func (s *Scanner) scan() error {
 	for !s.isAtEnd() {
 		err := s.next()
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 	s.addTokenLiteral(eof, "")
-	return s.tokens, nil
+	return nil
 }
 
 // Return the current character and advance the scanner.

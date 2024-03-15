@@ -2,36 +2,29 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"y86/model"
 )
 
 func main() {
-	file, err := os.ReadFile("./file.txt")
+	filename := os.Args[1]
+	bytes, readError := os.ReadFile(filename)
+	source := string(bytes)
 
-	if err != nil {
-		log.Fatal(err)
+	if readError != nil {
+		fmt.Println(readError)
 	}
 
-	src := string(file)
-	scanner := model.NewScanner(src)
+	cpu := model.CPU{}
+	assembler := *model.NewAssembler(source)
+	assemblyError := assembler.Assemble()
 
-	tokens, err := scanner.Scan()
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Printf("%v\n", tokens)
+	if assemblyError != nil {
+		fmt.Println(assemblyError)
 	}
 
-	parser := model.NewParser(tokens)
-	err = parser.Parse()
-
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	cpu := new(model.CPU)
-	parser.LoadCPU(cpu)
+	assembler.Load(&cpu)
 	cpu.Execute()
+	cpu.PrintRegisterFile()
+	assembler.PrintDataTable()
 }

@@ -45,7 +45,7 @@ type cc struct {
 }
 
 // Container for the CPU state.
-type cpuState struct {
+type CpuState struct {
 	instreg instReg // instruction register
 	valP    int     // PC increment if no jump
 	valA    int64   // val in rA
@@ -61,15 +61,22 @@ type cpuState struct {
 type CPU struct {
 	mem   [maxMem]byte  // memory
 	reg   [numReg]int64 // registers
-	state cpuState      // state
+	state CpuState      // state
+}
+
+func (cpu *CPU) PrintRegisterFile() {
+	fmt.Println("Register file:")
+	for i := 0; i < 4; i++ {
+		for j := i; j < 16; j += 4 {
+			fmt.Printf("r%d: %d\t", j, cpu.reg[j])
+		}
+		fmt.Println()
+	}
+	fmt.Println()
 }
 
 func (cpu *CPU) GetMem() *[maxMem]byte {
 	return &cpu.mem
-}
-
-func (cpu *CPU) GetState() *cpuState {
-	return &cpu.state
 }
 
 func (cpu *CPU) Execute() error {
@@ -118,18 +125,19 @@ func (cpu *CPU) CopyBuf(addr int, buf []byte) error {
 
 // Write a little endiann 8-byte integer to memory at an address. If the address is
 // invalid then set the status to ADR.
-func (cpu *CPU) writeLongToMem(addr int, val int64) {
+func (cpu *CPU) writeLongToMem(addr int, val int64) error {
 	if addr < 0 || addr+8 > maxMem {
 		cpu.state.status = adr
-		return
+		return fmt.Errorf("error: invalid address %#x", addr)
 	}
 
 	const mask byte = 0xff
 	for i := 0; i < 8; i++ {
-		byte := (byte(val) & mask)
-		cpu.mem[addr+i] = byte
+		curByte := (byte(val) & mask)
+		cpu.mem[addr+i] = curByte
 		val = val >> 8
 	}
+	return nil
 }
 
 func (cpu *CPU) writeBytesToMem(addr int, bytes []byte) error {
@@ -247,7 +255,8 @@ func (cpu *CPU) setNextPC() {
 // Fetch the next instruction and set the instruction register and valP.
 func (cpu *CPU) fetch() {
 	var size int
-	switch cpu.mem[cpu.state.pc] {
+	var opcode byte = cpu.mem[cpu.state.pc] >> 4
+	switch opcode {
 	case halt:
 		size = 1
 	case nop:
@@ -273,7 +282,6 @@ func (cpu *CPU) fetch() {
 	case popq:
 		size = 2
 	}
-
 	var instruction, err = cpu.readBytesFromMem(cpu.state.pc, size)
 	if err != nil {
 		cpu.state.status = adr
@@ -418,6 +426,8 @@ func (cpu *CPU) writeback() {
 	instreg := cpu.state.instreg
 
 	switch opcode {
+	case irmovq:
+		cpu.writeReg(instreg.rB, cpu.state.instreg.valC)
 	case rrmovq:
 		cpu.writeReg(instreg.rB, cpu.state.valA)
 	case mrmovq:

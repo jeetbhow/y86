@@ -2,8 +2,8 @@
 irmovq a, %r8
 mrmovq 0(%r8), %r8
 irmovq b, %r9
-mrmovq 1(%r9), %r9
-addq r8, r9
+mrmovq 0(%r9), %r9
+addq %r8, %r9
 halt
 
 .pos 0x1000
